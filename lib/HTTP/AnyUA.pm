@@ -213,7 +213,7 @@ C<"HEAD">, C<"DELETE">, etc.
 
 URL B<MUST> be a string representing the remote resource to be acted upon. The URL B<MUST> have
 unsafe characters escaped and international domain names encoded before being passed to the user
-agent. A user agent B<MUST> generated a C<"Host"> header based on the URL in accordance with RFC
+agent. A user agent B<MUST> generate a C<"Host"> header based on the URL in accordance with RFC
 2616; a user agent B<MAY> throw an error if a C<"Host"> header is given with the L</headers>.
 
 =head3 Options
@@ -263,7 +263,7 @@ a successful result means that the operation returned a 2XX status code.
 
 A response B<MUST> include a C<url> key, the value of which is the URL that provided the response.
 This is the URL used in the request unless there were redirections, in which case it is the last URL
-queried in a rediretion chain.
+queried in a redirection chain.
 
 =head3 status
 
@@ -307,7 +307,7 @@ Not all HTTP clients implement the same features or in the same ways. While the 
 is to hide those differences, you may notice some (hopefully) I<insignificant> differences when
 plugging in different clients. For example, L<LWP::UserAgent> sets some headers on the response such
 as C<client-date> and C<client-peer> that won't appear when using other clients. Little differences
-like these probably aren't big deal. Other differences may be a bigger deal, depending on what's
+like these probably aren't a big deal. Other differences may be a bigger deal, depending on what's
 important to you. For example, some clients (like L<HTTP::Tiny>) may do chunked transfer encoding in
 situations where other clients won't (probably because they don't support it). It's not a goal of
 this project to eliminate I<all> of the differences, but if you come across a difference that is
