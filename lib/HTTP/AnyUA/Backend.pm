@@ -23,7 +23,9 @@ package HTTP::AnyUA::Backend;
         return $resp;
     }
 
-    ### Non-blocking user agents return responses as Future objects:
+    ### Non-blocking user agents are expected to return Future objects:
+
+    use Future;
 
     sub response_is_future { 1 }
 
@@ -69,8 +71,8 @@ return value to and from its L<request|HTTP::Tiny/request> method.
 =head1 SEE ALSO
 
 =for :list
-* L<HTTP::AnyUA/REQUEST>  - Explanation of the request arguments
-* L<HTTP::AnyUA/RESPONSE> - Explanation of the response
+* L<HTTP::AnyUA/The Request>  - Explanation of the request arguments
+* L<HTTP::AnyUA/The Response> - Explanation of the response
 
 =cut
 

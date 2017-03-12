@@ -10,8 +10,8 @@ interface provided by L<HTTP::AnyUA>.
 
 =for :list
 * L<Furl> doesn't keep a list of requests and responses along a redirect chain. As such, the C<url>
-field in the response is always the same as the URL of the original request, and the C<redirects>
-field is never used.
+  field in the response is always the same as the URL of the original request, and the C<redirects>
+  field is never used.
 
 =head1 SEE ALSO
 
