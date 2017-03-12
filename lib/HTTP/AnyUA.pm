@@ -76,121 +76,6 @@ The primary goal of HTTP::AnyUA is to make it easy for module developers to writ
 that can work with any HTTP client the end user may decide to plug in. A secondary goal is to make
 it easy for anyone to add support for new or yet-unsupported user agents.
 
-=head1 SUPPORTED USER AGENTS
-
-=for :list
-* L<AnyEvent::HTTP>
-* L<Furl>
-* L<HTTP::AnyUA> - a little bit meta, but why not?
-* L<HTTP::Tiny>
-* L<LWP::UserAgent>
-* L<Mojo::UserAgent>
-* L<Net::Curl::Easy>
-
-Any HTTP client that inherits from one of these in a well-behaved manner should also be supported.
-
-Of course, there are many other HTTP clients on CPAN that HTTP::AnyUA doesn't yet support. I'm more
-than happy to help add support for others, so send me a message if you know of an HTTP client that
-needs support. See L<HTTP::AnyUA::Backend> for how to write support for a new HTTP client.
-
-=head1 NON-BLOCKING USER AGENTS
-
-HTTP::AnyUA tries to target the L<HTTP::Tiny> interface, which is a blocking interface. This means
-that when you call L</request>, it is supposed to not return until either the response is received
-or an error occurs. This doesn't jive well with non-blocking HTTP clients which expect the flow to
-reenter an event loop so that the request can complete concurrently.
-
-In order to reconcile this, a L<Future> will be returned instead of the normal hashref response if
-the wrapped HTTP client is non-blocking (such as L<Mojo::UserAgent> or L<AnyEvent::HTTP>). This
-L<Future> object may be used to set up callbacks that will be called when the request is completed.
-You can call L</response_is_future> to know if the response is or will be a L<Future>.
-
-This is typically okay for the end user; since they're the one who chose which HTTP client to use in
-the first place, they should know whether they should expect a L<Future> or a direct response when
-they make an HTTP request, but it does add some burden on you as a module writer because if you ever
-need to examine the response, you may need to write code like this:
-
-    my $resp = $any_ua->get('http://www.perl.org/');
-
-    if ($any_ua->response_is_future) {
-        $resp->on_done(sub {
-            my $real_resp = shift;
-            handle_response($real_resp);
-        });
-    }
-    else {
-        handle_response($resp);     # response is the real response already
-    }
-
-This actually isn't too annoying to deal with in practice, but you can avoid it if you like by
-forcing the response to always be a L<Future>. Just set the L</response_is_future> attribute. Then
-you don't need to do an if-else because the response will always be the same type:
-
-    $any_ua->response_is_future(1);
-
-    my $resp = $any_ua->get('http://www.perl.org/');
-
-    $resp->on_done(sub {            # response is always a Future
-        my $real_resp = shift;
-        handle_response($real_resp);
-    });
-
-Note that this doesn't make a blocking HTTP client magically non-blocking. The call to L</request>
-will still block if the client is blocking, and your "done" callback will simply be fired
-immediately. But this does let you write the same code in your module and have it work regardless of
-whether the underlying HTTP client is blocking or non-blocking.
-
-The default behavior is to return a direct hashref response if the HTTP client is blocking and
-a L<Future> if the client is non-blocking. It's up to you to decide whether or not to set
-C<response_is_future>, and you should also consider whether you want to expose the possibility of
-either type of response or always returning L<Future> objects to the end user of your module. It
-doesn't matter for users who choose non-blocking HTTP clients because they will be using L<Future>
-objects either way, but users who know they are using a blocking HTTP client may appreciate not
-having to deal with L<Future> objects at all.
-
-=head1 FREQUENTLY ASKED QUESTIONS
-
-=head2 How do I set up proxying, SSL, cookies, timeout, etc.?
-
-HTTP::AnyUA provides a common interface for I<using> HTTP clients, not for instantiating or
-configuring them. Proxying, SSL, and other custom settings can be configured directly through the
-underlying HTTP client; see the documentation for your particular user agent to learn how to
-configure these things.
-
-L<AnyEvent::HTTP> is a bit of a special case because there is no instantiated object representing
-the client. For this particular user agent, you can configure the backend to pass a default set of
-options whenever it calls C<http_request>. See L<HTTP::AnyUA::Backend::AnyEvent::HTTP/options>:
-
-    $any_ua->backend->options({recurse => 5, timeout => 15});
-
-If you are a module writer, you should probably receive a user agent from your end user and leave
-this type of configuration up to them.
-
-=head2 Why use HTTP::AnyUA instead of some other HTTP client?
-
-Maybe you shouldn't. If you're an end user writing a script or application, you can just pick the
-HTTP client that suits you best and use it. For example, if you're writing a L<Mojolicious> app,
-you're not going wrong by using L<Mojo::UserAgent>; it's loaded with features and is well-integrated
-with that particular environment.
-
-As an end user, you I<could> wrap the HTTP client you pick in an HTTP::AnyUA object, but the only
-reason to do this is if you prefer using the L<HTTP::Tiny> interface.
-
-The real benefit of HTTP::AnyUA (or something like it) is if module writers use it to allow end
-users of their modules to be able to plug in whatever HTTP client they want. For example, a module
-that implements an API wrapper that has a hard dependency on L<LWP::UserAgent> or even L<HTTP::Tiny>
-is essentially useless for non-blocking applications. If the same hypothetical module had been
-written using HTTP::AnyUA then it would be useful in any scenario.
-
-=head2 Why use the HTTP::Tiny interface?
-
-The L<HTTP::Tiny> interface is simple but provides all the essential functionality needed for
-a capable HTTP client and little more. That makes it easy to provide an implementation for, and it
-also makes it straightforward for module authors to use.
-
-Marrying the L<HTTP::Tiny> interface with L<Future> gives us these benefits for both blocking and
-non-blocking modules and applications.
-
 =head1 SPECIFICATION
 
 This section specifies a standard set of data structures that can be used to make a request and get
@@ -295,6 +180,121 @@ item is the value of one of the repeated headers.
 A response B<MAY> include a C<redirects> key, the value of which is an array reference of one or
 more responses from redirections that occurred to fulfill the current request, in chronological
 order.
+
+=head1 FREQUENTLY ASKED QUESTIONS
+
+=head2 How do I set up proxying, SSL, cookies, timeout, etc.?
+
+HTTP::AnyUA provides a common interface for I<using> HTTP clients, not for instantiating or
+configuring them. Proxying, SSL, and other custom settings can be configured directly through the
+underlying HTTP client; see the documentation for your particular user agent to learn how to
+configure these things.
+
+L<AnyEvent::HTTP> is a bit of a special case because there is no instantiated object representing
+the client. For this particular user agent, you can configure the backend to pass a default set of
+options whenever it calls C<http_request>. See L<HTTP::AnyUA::Backend::AnyEvent::HTTP/options>:
+
+    $any_ua->backend->options({recurse => 5, timeout => 15});
+
+If you are a module writer, you should probably receive a user agent from your end user and leave
+this type of configuration up to them.
+
+=head2 Why use HTTP::AnyUA instead of some other HTTP client?
+
+Maybe you shouldn't. If you're an end user writing a script or application, you can just pick the
+HTTP client that suits you best and use it. For example, if you're writing a L<Mojolicious> app,
+you're not going wrong by using L<Mojo::UserAgent>; it's loaded with features and is well-integrated
+with that particular environment.
+
+As an end user, you I<could> wrap the HTTP client you pick in an HTTP::AnyUA object, but the only
+reason to do this is if you prefer using the L<HTTP::Tiny> interface.
+
+The real benefit of HTTP::AnyUA (or something like it) is if module writers use it to allow end
+users of their modules to be able to plug in whatever HTTP client they want. For example, a module
+that implements an API wrapper that has a hard dependency on L<LWP::UserAgent> or even L<HTTP::Tiny>
+is essentially useless for non-blocking applications. If the same hypothetical module had been
+written using HTTP::AnyUA then it would be useful in any scenario.
+
+=head2 Why use the HTTP::Tiny interface?
+
+The L<HTTP::Tiny> interface is simple but provides all the essential functionality needed for
+a capable HTTP client and little more. That makes it easy to provide an implementation for, and it
+also makes it straightforward for module authors to use.
+
+Marrying the L<HTTP::Tiny> interface with L<Future> gives us these benefits for both blocking and
+non-blocking modules and applications.
+
+=head1 SUPPORTED USER AGENTS
+
+=for :list
+* L<AnyEvent::HTTP>
+* L<Furl>
+* L<HTTP::AnyUA> - a little bit meta, but why not?
+* L<HTTP::Tiny>
+* L<LWP::UserAgent>
+* L<Mojo::UserAgent>
+* L<Net::Curl::Easy>
+
+Any HTTP client that inherits from one of these in a well-behaved manner should also be supported.
+
+Of course, there are many other HTTP clients on CPAN that HTTP::AnyUA doesn't yet support. I'm more
+than happy to help add support for others, so send me a message if you know of an HTTP client that
+needs support. See L<HTTP::AnyUA::Backend> for how to write support for a new HTTP client.
+
+=head1 NON-BLOCKING USER AGENTS
+
+HTTP::AnyUA tries to target the L<HTTP::Tiny> interface, which is a blocking interface. This means
+that when you call L</request>, it is supposed to not return until either the response is received
+or an error occurs. This doesn't jive well with non-blocking HTTP clients which expect the flow to
+reenter an event loop so that the request can complete concurrently.
+
+In order to reconcile this, a L<Future> will be returned instead of the normal hashref response if
+the wrapped HTTP client is non-blocking (such as L<Mojo::UserAgent> or L<AnyEvent::HTTP>). This
+L<Future> object may be used to set up callbacks that will be called when the request is completed.
+You can call L</response_is_future> to know if the response is or will be a L<Future>.
+
+This is typically okay for the end user; since they're the one who chose which HTTP client to use in
+the first place, they should know whether they should expect a L<Future> or a direct response when
+they make an HTTP request, but it does add some burden on you as a module writer because if you ever
+need to examine the response, you may need to write code like this:
+
+    my $resp = $any_ua->get('http://www.perl.org/');
+
+    if ($any_ua->response_is_future) {
+        $resp->on_done(sub {
+            my $real_resp = shift;
+            handle_response($real_resp);
+        });
+    }
+    else {
+        handle_response($resp);     # response is the real response already
+    }
+
+This actually isn't too annoying to deal with in practice, but you can avoid it if you like by
+forcing the response to always be a L<Future>. Just set the L</response_is_future> attribute. Then
+you don't need to do an if-else because the response will always be the same type:
+
+    $any_ua->response_is_future(1);
+
+    my $resp = $any_ua->get('http://www.perl.org/');
+
+    $resp->on_done(sub {            # response is always a Future
+        my $real_resp = shift;
+        handle_response($real_resp);
+    });
+
+Note that this doesn't make a blocking HTTP client magically non-blocking. The call to L</request>
+will still block if the client is blocking, and your "done" callback will simply be fired
+immediately. But this does let you write the same code in your module and have it work regardless of
+whether the underlying HTTP client is blocking or non-blocking.
+
+The default behavior is to return a direct hashref response if the HTTP client is blocking and
+a L<Future> if the client is non-blocking. It's up to you to decide whether or not to set
+C<response_is_future>, and you should also consider whether you want to expose the possibility of
+either type of response or always returning L<Future> objects to the end user of your module. It
+doesn't matter for users who choose non-blocking HTTP clients because they will be using L<Future>
+objects either way, but users who know they are using a blocking HTTP client may appreciate not
+having to deal with L<Future> objects at all.
 
 =head1 ENVIRONMENT
 
