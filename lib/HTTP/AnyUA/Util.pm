@@ -1,5 +1,5 @@
 package HTTP::AnyUA::Util;
-# ABSTRACT: Utility subroutines for HTTP::AnyUA backends
+# ABSTRACT: Utility subroutines for HTTP::AnyUA backends and middleware
 
 use warnings;
 use strict;
@@ -13,6 +13,7 @@ our @EXPORT_OK = qw(
     http_headers_to_native
     native_to_http_request
     coderef_content_to_string
+    normalize_headers
     internal_exception
     http_date
     parse_http_date
@@ -100,6 +101,28 @@ sub http_headers_to_native {
     }
 
     return $native;
+}
+
+=func normalize_headers
+
+    $normalized_headers = normalize_headers(\%headers);
+
+Normalize headers. Currently lowercases header keys.
+
+=cut
+
+sub normalize_headers {
+    my $headers_in = shift;
+
+    my $headers = {};
+
+    if (defined $headers_in) {
+        while (my ($key, $value) = each %{$headers_in || {}}) {
+            $headers->{lc($key)} = $value;
+        }
+    }
+
+    return $headers;
 }
 
 =func internal_exception

@@ -338,11 +338,13 @@ use Scalar::Util;
 
 
 our $BACKEND_NAMESPACE;
+our $MIDDLEWARE_NAMESPACE;
 our @BACKENDS;
 our %REGISTERED_BACKENDS;
 
 BEGIN {
-    $BACKEND_NAMESPACE = __PACKAGE__ . '::Backend';
+    $BACKEND_NAMESPACE      = __PACKAGE__ . '::Backend';
+    $MIDDLEWARE_NAMESPACE   = __PACKAGE__ . '::Middleware';
 }
 
 
@@ -509,10 +511,7 @@ sub post_form {
     (@_ == 3 || @_ == 4 && ref $args eq 'HASH')
         or _usage(q{$any_ua->post_form($url, $formdata, \%options)});
 
-    my $headers = {};
-    while (my ($key, $value) = each %{$args->{headers} || {}}) {
-        $headers->{lc $key} = $value;
-    }
+    my $headers = HTTP::AnyUA::Util::normalize_headers($args->{headers});
     delete $args->{headers};
 
     return $self->request(POST => $url, {
@@ -552,13 +551,7 @@ sub mirror {
     @_ == 3 || (@_ == 4 && ref $args eq 'HASH')
         or _usage(q{$any_ua->mirror($url, $filepath, \%options)});
 
-    if (exists $args->{headers}) {
-        my $headers = {};
-        while (my ($key, $value) = each %{$args->{headers} || {}}) {
-            $headers->{lc($key)} = $value;
-        }
-        $args->{headers} = $headers;
-    }
+    $args->{headers} = HTTP::AnyUA::Util::normalize_headers($args->{headers});
 
     if (-e $file and my $mtime = (stat($file))[9]) {
         $args->{headers}{'if-modified-since'} ||= HTTP::AnyUA::Util::http_date($mtime);
@@ -611,6 +604,44 @@ sub mirror {
     else {
         return $finish->($resp);
     }
+}
+
+=method apply_middleware
+
+    $any_ua->apply_middleware($middleware_package);
+    $any_ua->apply_middleware($middleware_package, %args);
+    $any_ua->apply_middleware($middleware_obj);
+
+Wrap the backend with some new middleware. Middleware packages are relative to the
+C<HTTP::AnyUA::Middleware::> namespace unless prefixed with a C<+>.
+
+This effectively replaces the L</backend> with a new object that wraps the previous backend.
+
+This can be used multiple times to add multiple layers of middleware, and order matters. The last
+middleware applied is the first one to see the request and last one to get the response. For
+example, if you apply middleware that does logging and middleware that does caching (and
+short-circuits on a cache hit), applying your logging middleware I<first> will cause only cache
+misses to be logged whereas applying your cache middleware first will allow all requests to be
+logged.
+
+See L<HTTP::AnyUA::Middleware> for more information about what middleware is and how to write your
+own middleware.
+
+=cut
+
+sub apply_middleware {
+    my $self    = shift;
+    my $class   = shift;
+
+    if (!ref $class) {
+        $class = "${MIDDLEWARE_NAMESPACE}::${class}" unless $class =~ s/^\+//;
+        $self->_module_loader->load($class);
+    }
+
+    $self->{backend} = $class->wrap($self->backend, @_);
+    $self->_check_response_is_future($self->response_is_future);
+
+    return $self;
 }
 
 =method register_backend
