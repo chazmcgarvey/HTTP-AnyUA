@@ -142,7 +142,7 @@ sub _munge_response {
     }
 
     my $err = $tx->error;
-    if ($err and !$err->{code}) {
+    if ($err && !$err->{code}) {
         return HTTP::AnyUA::Util::internal_exception($err->{message}, $resp);
     }
 
