@@ -13,7 +13,7 @@ package HTTP::AnyUA::Middleware;
         # Maybe do something with the request args here.
 
         # Let backend handle the response:
-        my $response = $self->backend($method, $url, $args);
+        my $response = $self->backend->request($method, $url, $args);
 
         my $handle_response = sub {
             my $response = shift;
