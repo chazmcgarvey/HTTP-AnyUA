@@ -4,7 +4,7 @@ HTTP::AnyUA - An HTTP user agent programming interface unification layer
 
 # VERSION
 
-version 0.901
+version 0.902
 
 # SYNOPSIS
 
