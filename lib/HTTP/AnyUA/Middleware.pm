@@ -24,7 +24,7 @@ package HTTP::AnyUA::Middleware;
         };
 
         if ($self->response_is_future) {
-            $response->transform(
+            $response = $response->transform(
                 done => $handle_response,
                 fail => $handle_response,
             );

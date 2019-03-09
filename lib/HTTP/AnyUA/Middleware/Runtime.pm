@@ -44,7 +44,7 @@ sub request {
     };
 
     if ($self->response_is_future) {
-        $resp->transform(
+        $resp = $resp->transform(
             done => $handle_response,
             fail => $handle_response,
         );
