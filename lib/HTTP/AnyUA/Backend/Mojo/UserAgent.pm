@@ -6,6 +6,9 @@ package HTTP::AnyUA::Backend::Mojo::UserAgent;
 This module adds support for the HTTP client L<Mojo::UserAgent> to be used with the unified
 programming interface provided by L<HTTP::AnyUA>.
 
+If installed, requests will return L<Future::Mojo> rather than L<Future>. This allows the use of the
+C<< ->get >> method to await a result.
+
 =head1 CAVEATS
 
 =for :list
@@ -29,13 +32,21 @@ use Future;
 use Scalar::Util;
 
 
+my $future_class;
+BEGIN {
+    $future_class = 'Future';
+    eval 'use Future::Mojo';    ## no critic
+    $future_class = 'Future::Mojo' if !$@;
+}
+
+
 sub response_is_future { 1 }
 
 sub request {
     my $self = shift;
     my ($method, $url, $args) = @_;
 
-    my $future = Future->new;
+    my $future = $future_class->new;
 
     my $tx = $self->_munge_request(@_);
 
