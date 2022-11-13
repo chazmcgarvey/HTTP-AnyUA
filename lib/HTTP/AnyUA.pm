@@ -464,7 +464,7 @@ sub request {
     return $self->_wrap_response($resp);
 }
 
-=method get, head, put, post, delete
+=method get, head, put, post, patch delete
 
     $response = $any_ua->get($url);
     $response = $any_ua->get($url, \%options);
@@ -479,7 +479,7 @@ Compare to L<HTTP::Tiny/getE<verbar>headE<verbar>putE<verbar>postE<verbar>delete
 =cut
 
 # adapted from HTTP/Tiny.pm
-for my $sub_name (qw{get head put post delete}) {
+for my $sub_name (qw{get head put post patch delete}) {
     my %swap = (SUBNAME => $sub_name, METHOD => uc($sub_name));
     my $code = q[
 sub {{SUBNAME}} {
